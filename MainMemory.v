@@ -52,7 +52,7 @@ module MainMemory
   always @(posedge CLOCK) begin : DATA_blockRam
     if (memWrite) begin // & memRead
       DATA_RAM[(wild_0)] = ds[31:0];   // write (store word)
-      //$display("write to memory location: %d with data: %d", wild_0, ds[31:0]);
+      $display("write to memory location: %d with data: %d", wild_0, ds[31:0]);
     end
   
     // memRead = read signal

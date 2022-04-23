@@ -239,8 +239,8 @@ module DecodeExecuteInterface (clk,
     always @(negedge clk) begin
         #4
         //$display("setting alufirst and second val");
-        // $display("HAZARDaluFirstSrc: %b", HAZARDaluFirstSrc);
-        // $display("HAZARDaluSecondSrc: %b", HAZARDaluSecondSrc);
+         $display("HAZARDaluFirstSrc: %b", HAZARDaluFirstSrc);
+         $display("HAZARDaluSecondSrc: %b", HAZARDaluSecondSrc);
         case (HAZARDaluFirstSrc)
             2'b00: aluFirstVal = firstVal;
             2'b01: aluFirstVal = EXMEMaluResult;
@@ -384,8 +384,8 @@ module HazardDetectionUnit (clk,
     always @(negedge clk) begin
         #1      // After the interfaces are set
         //$display("setting hazard");
-        aluFirstSrc = 2'b00;
-        aluSecondSrc = aluSecondSrcTemp;
+        aluFirstSrc = 2'b00;        // Defaults to 0
+        aluSecondSrc = aluSecondSrcTemp;        // Defaults
 
         // $display("%b",EXMEMdestRegField);
         // $display("%b",IDEXrs);
@@ -396,26 +396,30 @@ module HazardDetectionUnit (clk,
         if (EXMEMdestRegField == IDEXrs)begin
             // Supply the ALU first operand to be the EXMEM's aluResult
             aluFirstSrc = 2'b01;
+            $display("hazard: case 1");
         end
 
         // Case 2: EX/MEM.destination register = ID/EX.register rt
         if (EXMEMdestRegField == IDEXrt)begin
             // Supply the ALU second operand to be the EXMEM's aluResult
-            aluFirstSrc = 2'b00;
-            if (aluSecondSrcTemp[0] != 1) aluSecondSrc = 2'b10;
+            if (aluSecondSrcTemp[0] != 1) begin aluSecondSrc = 2'b10;
+            $display("hazard: case 2");
+            end
         end
 
         // Case 3: MEM/WB.destination register = ID/EX.register rs
         if (MEMWBdestRegField == IDEXrs)begin
             // Supply the ALU first operand to be the MEMWB's aluResult
             aluFirstSrc = 2'b10;
+            $display("hazard: case 3");
         end
 
         // Case 4: MEM/WB.destination register = ID/EX.register rt
         if (MEMWBdestRegField == IDEXrt)begin
             // Supply the ALU second operand to be the MEMWB's aluResult
-            aluFirstSrc = 2'b00;
-            if (aluSecondSrcTemp[0] != 1) aluSecondSrc = 2'b11;
+            if (aluSecondSrcTemp[0] != 1) begin aluSecondSrc = 2'b11;
+            $display("hazard: case 4");
+            end
         end
 
         // $display("xxxxxxxxxxxxxxxx");

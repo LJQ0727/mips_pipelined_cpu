@@ -60,6 +60,7 @@ module ALU (
                     // sub
                     6'b100010: begin
                         result = firstVal - secondVal;
+                        $display("sub %d - %d", firstVal,secondVal);
                         //secondVal = ~secondVal + 1;
                         // detect overflow
                         //$display("%b",secondVal);
