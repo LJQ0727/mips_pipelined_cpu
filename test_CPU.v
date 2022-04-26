@@ -8,7 +8,7 @@
 `timescale 1ns/1ns
 
 
-module test_CPU;
+module test_CPU();
     
     reg clk;
     // Set up clock

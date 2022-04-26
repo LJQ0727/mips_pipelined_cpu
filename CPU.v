@@ -22,14 +22,14 @@ module CPU (
     integer clkcount = 0;
     
     always @(posedge clk) begin
-        //$display("posclk");
+        $display("posclk");
         pcIncrement = pc + 1;   // word-based
         clkcount = clkcount + 1;
         //$display("Clock: %d", clkcount);
     end
 
     always @(negedge clk) begin
-        //$display("negclk");
+        $display("negclk");
         // Used blocking assignment here
         if (!stallSignal) begin
             //pc = exmem.pcBranched;
@@ -67,12 +67,12 @@ module CPU (
         ifid.jumpAddr, ifid.finish, hazard.aluFirstSrc,
         exmem.aluResult, memwb.aluResult, control.aluSecondSrc);
     HazardDetectionUnit hazard(clk, exmem.destRegField, idex.rsField,
-        idex.rtField, memwb.destRegField, idex.aluSecondSrc
+        idex.rtField, memwb.destRegField
         );
     ALU alu(clk, idex.aluFirstVal, idex.aluSecondVal, idex.func,
         idex.opcode, idex.sa);
     ExecuteMemoryInterface exmem(clk, idex.branch, idex.jump, idex.pcBranched,
-        alu.zeroFlag, alu.result, idex.secondVal, idex.regWrite, idex.destRegField,
+        alu.zeroFlag, alu.result, idex.aluSecondValTemp, idex.regWrite, idex.destRegField,
         idex.memRead, idex.memWrite, idex.memToReg, idex.jumpAddr, idex.finish);
 
 always @(posedge clk) begin
@@ -177,17 +177,21 @@ module DecodeExecuteInterface (clk,
 
     // second operand
     // 00: rt
-    // 01: immediate
-    // 10: EXMEM's aluResult
-    // 11: MEMWB's aluResult
+    // 01: EXMEM's aluResult
+    // 10: MEMWB's aluResult
+
+    // second operand extended filter
+    // 0: from last one
+    // 1: immediate sign extend
 
     input [4:0] rtFieldTemp, rdFieldTemp, rsFieldTemp;
     input [5:0] funcTemp, opcodeTemp;
     input [4:0] saTemp;
-    input [1:0] HAZARDaluSecondSrc, HAZARDaluFirstSrc, aluSecondSrcTemp;       // Control the source of the first and second ALU operand
+    input [1:0] HAZARDaluSecondSrc, HAZARDaluFirstSrc;       // Control the source of the first and second ALU operand
+    input aluSecondSrcTemp;
 
     reg memWrite, memRead, memToReg, regDst, regWrite, branch, jump;     // Control signals
-    reg [31:0] pcBranched, firstVal, secondVal, immediateSignExt, jumpAddr;
+    reg [31:0] pcBranched, firstVal, secondVal, aluSecondValTemp, immediateSignExt, jumpAddr;
     reg [4:0] rtField, rdField, rsField;
     reg [5:0] func, opcode;
     reg [4:0] sa, destRegField;
@@ -224,39 +228,55 @@ module DecodeExecuteInterface (clk,
     end
 
     // RULE:
-    // first operand
+    //first operand
     // 00: rs
     // 01: EXMEM's aluResult
     // 10: MEMWB's aluResult
 
     // second operand
     // 00: rt
-    // 01: immediate
-    // 10: EXMEM's aluResult
-    // 11: MEMWB's aluResult
+    // 01: EXMEM's aluResult
+    // 10: MEMWB's aluResult
+
+    // second operand extended filter
+    // 0: from last one
+    // 1: immediate sign extend
 
 
     always @(negedge clk) begin
         #4
         //$display("setting alufirst and second val");
-         $display("HAZARDaluFirstSrc: %b", HAZARDaluFirstSrc);
-         $display("HAZARDaluSecondSrc: %b", HAZARDaluSecondSrc);
+        //  $display("HAZARDaluFirstSrc: %b", HAZARDaluFirstSrc);
+        //  $display("HAZARDaluSecondSrc: %b", HAZARDaluSecondSrc);
+        //  $display("aluSecondSrc: %b", aluSecondSrc);
+        // $display("immediateSignExt: %b", immediateSignExt);
+
         case (HAZARDaluFirstSrc)
             2'b00: aluFirstVal = firstVal;
             2'b01: aluFirstVal = EXMEMaluResult;
             2'b10: aluFirstVal = MEMWBaluResult;
             //default: aluFirstVal = firstVal; //$display("Error with aluFirstSrc");
         endcase
+
         case (HAZARDaluSecondSrc)
-            2'b00: aluSecondVal = secondVal;
-            2'b01: aluSecondVal = immediateSignExt;
-            2'b10: aluSecondVal = EXMEMaluResult;
-            2'b11: aluSecondVal = MEMWBaluResult;
+            2'b00: aluSecondValTemp = secondVal;
+            2'b01: aluSecondValTemp = EXMEMaluResult;
+            2'b10: aluSecondValTemp = MEMWBaluResult;
             //default: $display("error with HAZARDaluSecondSrc");
         endcase
 
+        case (aluSecondSrc)
+            1'b0: aluSecondVal = aluSecondValTemp;
+            1'b1: aluSecondVal = immediateSignExt;
+            //default: 
+        endcase
+
+
         // $display("after hazard unit set aluSecondVal: %b", aluSecondVal);
 
+        //  $display("aluSecondSrc in idex: %d", aluSecondSrc);
+        //  $display("immediateSignExt in idex: %d", immediateSignExt);
+        //  $display("aluSecondVal in idex: %d", aluSecondVal);
         // $display("destRegField in deex: %d", destRegField);
         // $display("regDstTemp: %d", regDstTemp);
         // $display("rtfieldTemp: %d", rtFieldTemp);
@@ -309,7 +329,7 @@ module ExecuteMemoryInterface (
         pcSrc[1] <= (jumpTemp == 1) ? 1 : 0;
         pcSrc[0] <= ((branchTemp == 1) && (zeroFlagTemp == 1)) ? 1 : 0;
 
-        //$display("secondVal: %d", secondVal);
+        $display("secondVal: %d", secondVal);
 
 
     end
@@ -356,16 +376,17 @@ endmodule
 
 // Does forwarding jobs
 module HazardDetectionUnit (clk,
-    EXMEMdestRegField, IDEXrs, IDEXrt, MEMWBdestRegField, 
-    aluSecondSrcTemp    // passed from control unit
+    EXMEMdestRegField, IDEXrs, IDEXrt, MEMWBdestRegField
+        // passed from control unit
     //EXMEMaluResult, MEMWBaluResult
 
 );
     input [4:0] EXMEMdestRegField, IDEXrs, IDEXrt, MEMWBdestRegField;
     input clk;
     reg [1:0] aluFirstSrc;        // If asserted, will change input to the first ALU operand
-    input [1:0] aluSecondSrcTemp;       // We should only set the MSB here
     reg [1:0] aluSecondSrc;
+
+    // RULE:
     //first operand
     // 00: rs
     // 01: EXMEM's aluResult
@@ -373,9 +394,8 @@ module HazardDetectionUnit (clk,
 
     // second operand
     // 00: rt
-    // 01: immediate
-    // 10: EXMEM's aluResult
-    // 11: MEMWB's aluResult
+    // 01: EXMEM's aluResult
+    // 10: MEMWB's aluResult
 
 
     // No need the CLK?????
@@ -385,11 +405,10 @@ module HazardDetectionUnit (clk,
         #1      // After the interfaces are set
         //$display("setting hazard");
         aluFirstSrc = 2'b00;        // Defaults to 0
-        aluSecondSrc = aluSecondSrcTemp;        // Defaults
+        aluSecondSrc = 2'b00;        // Defaults to 0
 
         // $display("%b",EXMEMdestRegField);
         // $display("%b",IDEXrs);
-        // $display("%b",IDEXrt);
 
 
         // Case 1: EX/MEM.destination register = ID/EX.register rs
@@ -399,12 +418,13 @@ module HazardDetectionUnit (clk,
             $display("hazard: case 1");
         end
 
+        $display("!EXMEMdestRegField: %b", EXMEMdestRegField);
+        $display("!IDExrt: %b",IDEXrt);
         // Case 2: EX/MEM.destination register = ID/EX.register rt
         if (EXMEMdestRegField == IDEXrt)begin
             // Supply the ALU second operand to be the EXMEM's aluResult
-            if (aluSecondSrcTemp[0] != 1) begin aluSecondSrc = 2'b10;
+            aluSecondSrc = 2'b01;
             $display("hazard: case 2");
-            end
         end
 
         // Case 3: MEM/WB.destination register = ID/EX.register rs
@@ -417,9 +437,8 @@ module HazardDetectionUnit (clk,
         // Case 4: MEM/WB.destination register = ID/EX.register rt
         if (MEMWBdestRegField == IDEXrt)begin
             // Supply the ALU second operand to be the MEMWB's aluResult
-            if (aluSecondSrcTemp[0] != 1) begin aluSecondSrc = 2'b11;
+            aluSecondSrc = 2'b10;
             $display("hazard: case 4");
-            end
         end
 
         // $display("xxxxxxxxxxxxxxxx");
@@ -429,6 +448,10 @@ module HazardDetectionUnit (clk,
         // $display("%b",aluFirstSrc);
         // $display("%b",aluSecondSrc);
 
+        // Case 5: memory hazard
+        // One case where forwarding cannot save the day is when 
+        // an instruction tries to read a register following a load instruction that writes 
+        // the same register
 
 
     end

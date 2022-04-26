@@ -114,13 +114,13 @@ module ALU (
                     // addi
                     6'b001000: begin
                         result = firstVal + secondVal;       // second val is immediate
-                        //$display("addi called, %d, %d", firstVal, secondVal);
+                        $display("addi called, %d, %d", firstVal, secondVal);
                         // detect overflow
                         //overflowFlag = (firstVal[31] ^ immediate[15]) ? 0 : (firstVal[31] ^ result[31]);
                     end
                     // addiu
                     6'b001001:begin
-                        //$display("addiu called, %d, %d", firstVal, secondVal);
+                        $display("addiu called, %d, %d", firstVal, secondVal);
                         result = firstVal + secondVal;       // second val is immediate
                     end
                     // andi

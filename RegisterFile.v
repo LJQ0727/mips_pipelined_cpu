@@ -31,8 +31,8 @@ module RegisterFile (
         // read
         firstVal <= registers[firstRegNumber];
         secondVal <= registers[secondRegNumber];
-        //  $display("readRegNumber: %d", secondRegNumber);
-        //  $display("readData: %d", registers[secondRegNumber]);
+        //   $display("readRegNumber: %d", firstRegNumber);
+        //  $display("readData: %d", registers[firstRegNumber]);
     end
 
     always @(posedge clk) begin

@@ -4,7 +4,7 @@
 // is not one of the five pipeline stages.
 
 module ControlUnit (
-    opcode, func  // memWrite, memRead, memToReg, aluSecondSrc[0], regDst, regWrite
+    opcode, func  // memWrite, memRead, memToReg, aluSecondSrc, regDst, regWrite
 );
     input [5:0] opcode, func;
 
@@ -12,7 +12,7 @@ module ControlUnit (
     reg memWrite;   // If asserted, write to data memory
     reg memRead;    // If asserted, read from data memory
     reg memToReg;   // If asserted, The value to reg write comes from memory; else from ALU
-    reg [1:0] aluSecondSrc;     // 2 bits, MSB for hazard detection unit to control
+    reg aluSecondSrc;     // if 1, input from immediate field
     reg regDst;     // If asserted, the register "write data" is rd(15:11); else rt(20:16)
     reg regWrite;   // If asserted, the register will write data on the falling edge signal
     reg branch;     // Is branch instruction (not including jump)
@@ -21,7 +21,6 @@ module ControlUnit (
 
 
     always @(opcode or func) begin
-    aluSecondSrc[1] <= 0;       // Default the MSB to 0; subjected to change in the hazard detection unit
     case (opcode)
         6'b000000: // R-type instructions
         begin
@@ -32,7 +31,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 0;
+                    aluSecondSrc <= 0;
                     regDst <= 1;
                     regWrite <= 1;
                     branch <= 0;
@@ -42,7 +41,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 0;
+                    aluSecondSrc <= 0;
                     regDst <= 1;
                     regWrite <= 1;
                     branch <= 0;
@@ -53,7 +52,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 0;
+                    aluSecondSrc <= 0;
                     regDst <= 1;
                     regWrite <= 1;
                     branch <= 0;
@@ -64,7 +63,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 0;
+                    aluSecondSrc <= 0;
                     regDst <= 1;
                     regWrite <= 1;
                     branch <= 0;
@@ -75,7 +74,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 0;
+                    aluSecondSrc <= 0;
                     regDst <= 1;
                     regWrite <= 1;
                     branch <= 0;
@@ -86,7 +85,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 0;
+                    aluSecondSrc <= 0;
                     regDst <= 1;
                     regWrite <= 1;
                     branch <= 0;
@@ -97,7 +96,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 0;
+                    aluSecondSrc <= 0;
                     regDst <= 1;
                     regWrite <= 1;
                     branch <= 0;
@@ -108,7 +107,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 0;
+                    aluSecondSrc <= 0;
                     regDst <= 1;
                     regWrite <= 1;
                     branch <= 0;
@@ -119,7 +118,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 0;
+                    aluSecondSrc <= 0;
                     regDst <= 1;
                     regWrite <= 1;
                     branch <= 0;
@@ -130,7 +129,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 0;
+                    aluSecondSrc <= 0;
                     regDst <= 1;
                     regWrite <= 1;
                     branch <= 0;
@@ -141,7 +140,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 0;
+                    aluSecondSrc <= 0;
                     regDst <= 1;
                     regWrite <= 1;
                     branch <= 0;
@@ -152,7 +151,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 0;
+                    aluSecondSrc <= 0;
                     regDst <= 1;
                     regWrite <= 1;
                     branch <= 0;
@@ -163,7 +162,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 0;
+                    aluSecondSrc <= 0;
                     regDst <= 1;
                     regWrite <= 1;
                     branch <= 0;
@@ -174,7 +173,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 0;
+                    aluSecondSrc <= 0;
                     regDst <= 1;
                     regWrite <= 1;
                     branch <= 0;
@@ -185,7 +184,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 0;
+                    aluSecondSrc <= 0;
                     regDst <= 1;
                     regWrite <= 1;
                     branch <= 0;
@@ -202,7 +201,7 @@ module ControlUnit (
             memWrite <= 0;
             memRead <= 0;
             memToReg <= 0;
-            aluSecondSrc[0] <= 0;
+            aluSecondSrc <= 0;
             regDst <= 0;
             regWrite <= 0;
             branch <= 0;
@@ -213,7 +212,7 @@ module ControlUnit (
             memWrite <= 0;
             memRead <= 0;
             memToReg <= 0;
-            aluSecondSrc[0] <= 0;
+            aluSecondSrc <= 0;
             regDst <= 0;
             regWrite <= 0;
             branch <= 0;
@@ -229,7 +228,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 1;
+                    aluSecondSrc <= 1;
                     regDst <= 0;
                     regWrite <= 1;
                     branch <= 0;
@@ -240,7 +239,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 1;
+                    aluSecondSrc <= 1;
                     regDst <= 0;
                     regWrite <= 1;
                     branch <= 0;
@@ -251,7 +250,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 1;
+                    aluSecondSrc <= 1;
                     regDst <= 0;
                     regWrite <= 1;
                     branch <= 0;
@@ -262,7 +261,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 1;
+                    aluSecondSrc <= 1;
                     regDst <= 0;
                     regWrite <= 1;
                     branch <= 0;
@@ -273,7 +272,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 1;
+                    aluSecondSrc <= 1;
                     regDst <= 0;
                     regWrite <= 1;
                     branch <= 0;
@@ -284,7 +283,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 1;
+                    aluSecondSrc <= 1;
                     regDst <= 0;
                     regWrite <= 0;
                     branch <= 1;
@@ -295,7 +294,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 1;
+                    aluSecondSrc <= 1;
                     regDst <= 0;
                     regWrite <= 0;
                     branch <= 1;
@@ -306,7 +305,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 1;
                     memToReg <= 1;
-                    aluSecondSrc[0] <= 1;
+                    aluSecondSrc <= 1;
                     regDst <= 0;        // rt
                     regWrite <= 1;
                     branch <= 0;
@@ -317,7 +316,7 @@ module ControlUnit (
                     memWrite <= 1;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 1;
+                    aluSecondSrc <= 1;
                     regDst <= 0;
                     regWrite <= 0;
                     branch <= 0;
@@ -328,7 +327,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc[0] <= 0;
+                    aluSecondSrc <= 0;
                     regDst <= 0;
                     regWrite <= 0;
                     branch <= 0;
