@@ -27,7 +27,7 @@ module RegisterFile (
 
 
     always @(posedge clk) begin
-        
+        #1      // First write in then read
         // read
         firstVal <= registers[firstRegNumber];
         secondVal <= registers[secondRegNumber];
