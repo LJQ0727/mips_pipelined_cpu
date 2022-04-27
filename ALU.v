@@ -144,14 +144,14 @@ module ALU (
                     // lw
                     6'b100011: begin 
                         result = firstVal + secondVal/4;        // added to the sign-extended immediate, no shifting
-                        // $display("lw called: %d %d", firstVal, secondVal);
+                         $display("lw called: %d %d", firstVal, secondVal);
                         // $display("result: %d", result);
 
                     end
                     // sw
                     6'b101011: begin 
                         result = firstVal + secondVal/4;        // added to the sign-extended immediate, no shifting
-                        // $display("sw called: %d %d", firstVal, secondVal);
+                         $display("sw called: %d %d", firstVal, secondVal);
                         // $display("result: %d", result);
                     end
 
