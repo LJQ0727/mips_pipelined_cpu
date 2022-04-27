@@ -107,8 +107,14 @@ module CPU (
             idex.jump <= 1'b0;
             idex.rtField <= 5'b00000;
             idex.rdField <= 5'b00000;
-            // idex.aluSecondVal <= 0;
-            idex.aluFirstVal <= 12345;
+            idex.rsField <= 5'b00000;
+            idex.destRegField <= 5'b00000;
+            idex.sa <= 5'b00000;
+            idex.func <= 0;
+            idex.opcode <= 0;
+            idex.finish <= 0;
+
+            idex.aluFirstVal <= 0;
             idex.aluSecondVal <= 0;
             $display("cleared the control");
 
@@ -318,6 +324,7 @@ module DecodeExecuteInterface (clk,
             2'b00: aluFirstVal = firstVal;
             2'b01: aluFirstVal = EXMEMaluResult;
             2'b10: aluFirstVal = MEMWBaluResult;
+            2'b11: aluFirstVal = MEMWBreadDataMem;
             //default: aluFirstVal = firstVal; //$display("Error with aluFirstSrc");
         endcase
 
@@ -394,7 +401,7 @@ module ExecuteMemoryInterface (
 
         pcSrc[1] <= (jumpTemp == 1) ? 1 : 0;
         pcSrc[0] <= ((branchTemp == 1) && (ALUresultTemp == 1)) ? 1 : 0;
-        $display("branch: %b", branchTemp);
+        //$display("branch: %b", branchTemp);
         //$display("aluResult: %d", aluResult);
         if ((branchTemp == 1) && (ALUresultTemp == 1)) $display("branching...");
 
@@ -486,10 +493,10 @@ module HazardDetectionUnit (clk,
         if (MEMWBdestRegField == IDEXrs)begin
             // Supply the ALU first operand to be the MEMWB's aluResult
             if (MEMWBmemToReg == 1) begin 
-                aluSecondSrc = 2'b11;
+                aluFirstSrc = 2'b11;
                 $display("hazard: case 3 for lw");
             end
-            else begin aluSecondSrc = 2'b10;
+            else begin aluFirstSrc = 2'b10;
                 $display("hazard: case 3 for register");
             end
         end
