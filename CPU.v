@@ -75,7 +75,7 @@ module CPU (
             idex.aluSecondVal <= 0;
             $display("cleared the control");
 
-            #0     // Unstall the next next posedge
+            // Unstall the next next posedge
             stallSignal <= 1'b0;
             $display("unstalled the signal");
         end
