@@ -6,16 +6,16 @@
 `include "MainMemory.v"
 `include "ControlUnit.v"
 
+// Note: 1 clock is 10 ns for this cpu
 
 module CPU (
     input clk
 );
 
     // Stall signal should be controlled by hazard detection unit
-    // ???
     reg stallSignal;    // If asserted, stall the pc register and the fetch decode interface registers
-    //reg unstallSignal;  // Unstall the first two stages
     reg finish;     // Indicate whether the terminate signal is on
+    wire [31:0] instruction;
 
     // Maintain program counter
     reg[31:0] pc, pcIncrement;       // Maintaining the program counter register
@@ -26,20 +26,25 @@ module CPU (
         pcIncrement = pc + 1;   // word-based
         clkcount = clkcount + 1;
         //$display("Clock: %d", clkcount);
-        $display("stallSignal: %b", stallSignal);
+        //$display("stallSignal: %b", stallSignal);
     end
 
     always @(negedge clk) begin
         $display("negclk");
+        //$display("instruction: %b", instruction);
     end
 
+    // Set program counter
     always @(negedge clk) begin
+        #4
         // Used blocking assignment here
         if (!stallSignal) begin
-            //pc = exmem.pcBranched;
             case (exmem.pcSrc)
                 2'b00: pc = pcIncrement;
-                2'b01: pc = exmem.pcBranched;
+                2'b01: begin 
+                    pc = exmem.pcBranched;
+                    $display("branching to %d", pc);
+                end
                 2'b10: pc = exmem.jumpAddr;
                 default: begin
                     //$display("%b, Error: invalid pcSrc signal.", exmem.pcSrc);
@@ -47,11 +52,43 @@ module CPU (
                 end
             endcase
         end
-
-
     end
 
-    // 1. For lw stall
+    // Put together components
+    InstructionRAM insMem(clk, 1'b0, 1'b1, pc, instruction);
+    FetchDecodeInterface ifid(clk, instruction, stallSignal, pcIncrement);
+    ControlUnit control(ifid.opcode, ifid.func);
+    RegisterFile regfile(clk, ifid.rs, ifid.rt, 
+        memwb.destRegField, memwb.writeDataReg, memwb.regWrite);
+    DecodeExecuteInterface idex(clk, control.memWrite, 
+        control.memRead, control.memToReg, hazard.aluSecondSrc, control.regDst,
+        control.regWrite, control.branch, control.jump,
+        ifid.pcIncrement, regfile.firstVal, regfile.secondVal,
+        ifid.immediateSignExt, ifid.rt, ifid.rd, ifid.rs, ifid.func, ifid.opcode, ifid.sa,
+        ifid.jumpAddr, ifid.finish, hazard.aluFirstSrc,
+        exmem.aluResult, memwb.aluResult, control.aluSecondSrc,
+        memwb.readDataMem);
+    HazardDetectionUnit hazard(clk, exmem.destRegField, idex.rsField,
+        idex.rtField, memwb.destRegField, memwb.memToReg
+        );
+    ALU alu(clk, idex.aluFirstVal, idex.aluSecondVal, idex.func,
+        idex.opcode, idex.sa);
+    ExecuteMemoryInterface exmem(clk, idex.branch, idex.jump, idex.pcBranched,
+        alu.zeroFlag, alu.result, idex.aluSecondValTemp, idex.regWrite, idex.destRegField,
+        idex.memRead, idex.memWrite, idex.memToReg, idex.jumpAddr, idex.finish);
+
+    // Prepare inputs to data memory
+    wire [64:0] EDIT_SERIAL;
+    //wire [31:0] DATA_TEMP; // unused
+    assign EDIT_SERIAL[64] = exmem.memWrite;        // If want to write, assign this bit
+    assign EDIT_SERIAL[63:32] = exmem.aluResult;
+    assign EDIT_SERIAL[31:0] = exmem.secondVal;
+
+    MainMemory dataMem(clk, 1'b0, exmem.memRead, exmem.aluResult, EDIT_SERIAL, exmem.memWrite);
+    MemoryWriteBackInterface memwb(clk, exmem.regWrite, exmem.memToReg,
+    dataMem.DATA, exmem.aluResult, exmem.destRegField, exmem.finish);
+
+    // 1. For lw stall hazard
     always @(posedge idex.memRead) begin       // at certain negedge clk
         #1  // After the interface values are set
         if (idex.rtField == ifid.rs || idex.rtField == ifid.rt) begin 
@@ -82,51 +119,41 @@ module CPU (
         
     end
 
-
-    wire [31:0] instruction;
-    
-    
-    // Put together components
-    InstructionRAM insMem(clk, 1'b0, 1'b1, pc, instruction);
-    FetchDecodeInterface ifid(clk, instruction, stallSignal, pcIncrement);
-    ControlUnit control(ifid.opcode, ifid.func);
-    RegisterFile regfile(clk, ifid.rs, ifid.rt, 
-        memwb.destRegField, memwb.writeDataReg, memwb.regWrite);
-    DecodeExecuteInterface idex(clk, control.memWrite, 
-        control.memRead, control.memToReg, hazard.aluSecondSrc, control.regDst,
-        control.regWrite, control.branch, control.jump,
-        ifid.pcIncrement, regfile.firstVal, regfile.secondVal,
-        ifid.immediateSignExt, ifid.rt, ifid.rd, ifid.rs, ifid.func, ifid.opcode, ifid.sa,
-        ifid.jumpAddr, ifid.finish, hazard.aluFirstSrc,
-        exmem.aluResult, memwb.aluResult, control.aluSecondSrc,
-        memwb.readDataMem);
-    HazardDetectionUnit hazard(clk, exmem.destRegField, idex.rsField,
-        idex.rtField, memwb.destRegField, memwb.memToReg
-        );
-    ALU alu(clk, idex.aluFirstVal, idex.aluSecondVal, idex.func,
-        idex.opcode, idex.sa);
-    ExecuteMemoryInterface exmem(clk, idex.branch, idex.jump, idex.pcBranched,
-        alu.zeroFlag, alu.result, idex.aluSecondValTemp, idex.regWrite, idex.destRegField,
-        idex.memRead, idex.memWrite, idex.memToReg, idex.jumpAddr, idex.finish);
-
-always @(posedge clk) begin
-    //$display("idex.aluSecondVal: %b", idex.aluSecondVal);
-end
-
-    // Prepare inputs to data memory
-    wire [64:0] EDIT_SERIAL;
-    //wire [31:0] DATA_TEMP; // unused
-    assign EDIT_SERIAL[64] = exmem.memWrite;        // If want to write, assign this bit
-    assign EDIT_SERIAL[63:32] = exmem.aluResult;
-    assign EDIT_SERIAL[31:0] = exmem.secondVal;
+    // 2. For branch hazard
+    always @(negedge clk) begin     
+        // We assume branch not taken and continue execution
+        // However, when the branch is taken, should eliminate the executed ones
+        #1
+        if (exmem.pcSrc == 2'b01) begin      // branch taken
+            // Eliminate information of 3 interfaces
+            
+            // Overwrite to do nothing on these instructions
+            ifid.opcode <= 0;
+            ifid.func <= 0;
+            ifid.rs <= 0;
+            ifid.rt <= 0;
+            ifid.rd <= 0;
+            ifid.sa <= 0;
+            ifid.immediate <= 0;
+            ifid.immediateSignExt <= 0;
+            ifid.jumpAddr <= 0;
+            ifid.pcIncrement <= 0;
+            ifid.finish <= 0;
 
 
+            idex.memWrite <= 0;
+            idex.memRead <= 0;
+            idex.memToReg <= 0;
+            idex.aluSecondSrc <= 0;
+            idex.regDst <= 0;
+            idex.regWrite <= 0;
+            idex.branch <= 0;
+            idex.jump <= 0;
 
-    MainMemory dataMem(clk, 1'b0, exmem.memRead, exmem.aluResult, EDIT_SERIAL, exmem.memWrite);
-    MemoryWriteBackInterface memwb(clk, exmem.regWrite, exmem.memToReg,
-    dataMem.DATA, exmem.aluResult, exmem.destRegField, exmem.finish);
+            $display("Branch hazard countered");
+        end
 
-    
+    end
 
 endmodule
 
@@ -237,15 +264,15 @@ module DecodeExecuteInterface (clk,
     always @(negedge clk) begin
         //$display("secondValTemp received in idex: %b", secondValTemp);
         memWrite <= memWriteTemp;
-        branch = branchTemp;
-        jump = jumpTemp;
+        branch <= branchTemp;
+        jump <= jumpTemp;
         memRead <= memReadTemp;
         memToReg <= memToRegTemp;
         aluSecondSrc <= aluSecondSrcTemp;
         //aluSecondSrc <= HAZARDaluSecondSrc;
         regDst <= regDstTemp;
         regWrite <= regWriteTemp;
-        pcBranched <= pcIncrementTemp + immediateSignExtTemp;
+        pcBranched <= pcIncrementTemp + immediateSignExtTemp;   // The branch destination addr
         immediateSignExt <= immediateSignExtTemp;
         rtField <= rtFieldTemp;
         rdField <= rdFieldTemp;
@@ -281,7 +308,7 @@ module DecodeExecuteInterface (clk,
         #2      // After the hazard signals are set
 
         //$display("setting alufirst and second val");
-        // $display("HAZARDaluFirstSrc: %b", HAZARDaluFirstSrc);
+        // $display("branch in idex: %b", branch);
         //   $display("HAZARDaluSecondSrc: %b", HAZARDaluSecondSrc);
         //   $display("MEMWBreadDataMem: %d", MEMWBreadDataMem);
         //  $display("aluSecondSrc: %b", aluSecondSrc);
@@ -361,10 +388,15 @@ module ExecuteMemoryInterface (
         jumpAddr <= jumpAddrTemp;
         destRegField <= destRegFieldTemp;
         finish <= finishTemp;
+        // branch <= branchTemp;
+        // jump <= jumpTemp;
         //$display("destRegField in exmem: %d", destRegField);
 
         pcSrc[1] <= (jumpTemp == 1) ? 1 : 0;
-        pcSrc[0] <= ((branchTemp == 1) && (zeroFlagTemp == 1)) ? 1 : 0;
+        pcSrc[0] <= ((branchTemp == 1) && (ALUresultTemp == 1)) ? 1 : 0;
+        $display("branch: %b", branchTemp);
+        //$display("aluResult: %d", aluResult);
+        if ((branchTemp == 1) && (ALUresultTemp == 1)) $display("branching...");
 
         //$display("secondVal: %d", secondVal);
 
@@ -399,18 +431,6 @@ module MemoryWriteBackInterface (
     end
 endmodule
 
-module ForwardingUnit (
-    stallSignal
-);
-    output stallSignal;
-
-    // TODO
-
-
-
-
-
-endmodule
 
 // Does forwarding jobs
 module HazardDetectionUnit (clk,
@@ -486,19 +506,11 @@ module HazardDetectionUnit (clk,
             end
         end
 
+
         // $display("xxxxxxxxxxxxxxxx");
          //$display("in hazard unit firstsrc: %b", aluFirstSrc);
         // $display("in hazard unit secondsrc: %b", aluSecondSrc);
 
-
-        // Case 5: memory hazard
-        // One case where forwarding cannot save the day is when 
-        // an instruction tries to read a register following a load instruction that writes 
-        // the same register
-
-
     end
-
-
 
 endmodule

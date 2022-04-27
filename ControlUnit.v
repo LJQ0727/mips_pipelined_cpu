@@ -283,7 +283,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc <= 1;
+                    aluSecondSrc <= 0;
                     regDst <= 0;
                     regWrite <= 0;
                     branch <= 1;
@@ -294,7 +294,7 @@ module ControlUnit (
                     memWrite <= 0;
                     memRead <= 0;
                     memToReg <= 0;
-                    aluSecondSrc <= 1;
+                    aluSecondSrc <= 0;
                     regDst <= 0;
                     regWrite <= 0;
                     branch <= 1;

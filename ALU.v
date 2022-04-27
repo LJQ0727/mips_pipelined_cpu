@@ -79,6 +79,7 @@ module ALU (
                     // slt
                     6'b101010: begin
                         result = (firstVal < secondVal);        // Directly set the result to indicate less than; removes negative flag
+                        $display("slt called: %d %d; result: %d", firstVal, secondVal, result);
                         // set negative flag
                         //negativeFlag = (firstValSigned < secondValSigned);
                     end
@@ -132,14 +133,16 @@ module ALU (
                     6'b001110: result = firstVal ^ (secondVal & 32'h0000ffff);       // second val is immediate
                     // beq
                     6'b000100: begin
-                        result = (firstVal - secondVal);
+                        result = ((firstVal - secondVal) == 0);
                         if (result == 0) zeroFlag = 1;
+                        $display("beq called: comaparing %d %d", firstVal, secondVal);
                     end
                     // bne
                     6'b000101: begin
                         //result = immediate << 2;
-                        result = (firstVal - secondVal);
-                        if (result == 0) zeroFlag = 1;
+                        result = ((firstVal - secondVal) != 0);
+                        if (result == 0) zeroFlag = 1;      // Should use result to indicate branch or not; zeroFLag is depreciated
+                        $display("bne called: comaparing %d %d; result %d", firstVal, secondVal, result);
                     end
                     // lw
                     6'b100011: begin 

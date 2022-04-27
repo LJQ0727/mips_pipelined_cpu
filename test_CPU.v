@@ -43,6 +43,7 @@ module test_CPU();
         //$display("hello world");
         cpu.pc <= 0;
         cpu.stallSignal <= 0;
+        cpu.pcIncrement <= 0;
         //$monitor(cpu.pc);
 
         //$monitor("stall: %b",cpu.stallSignal);
