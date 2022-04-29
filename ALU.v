@@ -29,16 +29,9 @@ module ALU (
     // The arithmetic logics
     always @(posedge clk) begin
         #1
-        //$display("alu received secondVal: %b",secondVal);
-        //$display("opcode: %b",opcode);
-        //$display("func: %b",func);
         // set default flags to 0
         //overflowFlag = 0;
         zeroFlag = 0;
-        //negativeFlag = 0;
-
-        // assign sa (if exists), = secondVal
-        // use mux for that selection
 
         // The logics
         case (opcode)
@@ -60,7 +53,7 @@ module ALU (
                     // sub
                     6'b100010: begin
                         result = firstVal - secondVal;
-                        $display("sub %d - %d", firstVal,secondVal);
+                        //$display("sub %d - %d", firstVal,secondVal);
                         //secondVal = ~secondVal + 1;
                         // detect overflow
                         //$display("%b",secondVal);
@@ -79,7 +72,7 @@ module ALU (
                     // slt
                     6'b101010: begin
                         result = (firstVal < secondVal);        // Directly set the result to indicate less than; removes negative flag
-                        $display("slt called: %d %d; result: %d", firstVal, secondVal, result);
+                        //$display("slt called: %d %d; result: %d", firstVal, secondVal, result);
                         // set negative flag
                         //negativeFlag = (firstValSigned < secondValSigned);
                     end
@@ -98,7 +91,6 @@ module ALU (
                     // jr
                     6'b001000: begin 
                         result = firstVal;
-                        $display("jr detected in ALU");
                     end
 
                     // default: // should not occur
@@ -108,21 +100,20 @@ module ALU (
 
             6'b000011:      // jal's opcode
             begin
-                $display("jal detected in ALU");
                 result = firstVal;
             end
 
+            // Omits j command because it doesn't require ALU to do anything
                 
             // addi
             6'b001000: begin
                 result = firstVal + secondVal;       // second val is immediate
-                $display("addi called, %d, %d", firstVal, secondVal);
+                //$display("addi called, %d, %d", firstVal, secondVal);
                 // detect overflow
                 //overflowFlag = (firstVal[31] ^ immediate[15]) ? 0 : (firstVal[31] ^ result[31]);
             end
             // addiu
             6'b001001:begin
-                $display("addiu called, %d, %d", firstVal, secondVal);
                 result = firstVal + secondVal;       // second val is immediate
             end
             // andi
@@ -136,26 +127,26 @@ module ALU (
             6'b000100: begin
                 result = ((firstVal - secondVal) == 0);
                 if (result == 0) zeroFlag = 1;
-                $display("beq called: comaparing %d %d", firstVal, secondVal);
+                //$display("beq called: comaparing %d %d", firstVal, secondVal);
             end
             // bne
             6'b000101: begin
                 //result = immediate << 2;
                 result = ((firstVal - secondVal) != 0);
                 if (result == 0) zeroFlag = 1;      // Should use result to indicate branch or not; zeroFLag is depreciated
-                $display("bne called: comaparing %d %d; result %d", firstVal, secondVal, result);
+                //$display("bne called: comaparing %d %d; result %d", firstVal, secondVal, result);
             end
             // lw
             6'b100011: begin 
                 result = firstVal + secondVal/4;        // added to the sign-extended immediate, no shifting
-                    $display("lw called: %d %d", firstVal, secondVal);
+                    //$display("lw called: %d %d", firstVal, secondVal);
                 // $display("result: %d", result);
 
             end
             // sw
             6'b101011: begin 
                 result = firstVal + secondVal/4;        // added to the sign-extended immediate, no shifting
-                    $display("sw called: %d %d", firstVal, secondVal);
+                    //$display("sw called: %d %d", firstVal, secondVal);
                 // $display("result: %d", result);
             end
 

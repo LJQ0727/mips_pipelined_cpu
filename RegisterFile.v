@@ -44,8 +44,7 @@ module RegisterFile (
             // $display("writeData: %d", writeData);
             if (writeRegNumber != 5'b00000)begin
                 registers[writeRegNumber] = writeData;  // Register 0 is always kept 0
-                //$display(registers[writeRegNumber]);
-                $display("write %d to register number %d", writeData, writeRegNumber);
+                //$display("write %d to register number %d", writeData, writeRegNumber);
             end
         end
     end

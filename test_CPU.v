@@ -17,18 +17,21 @@ module test_CPU();
     end
     always #5 clk = ~clk;   // One clock cycle is 10 ns
 
-    reg [4:0] firstRegNumber, secondRegNumber;
-    reg [31:0] writeRegNumber, writeData;
-    reg regWriteSignal;
-    wire [31:0] firstVal, secondVal;      // The retrieved register values
-
-    
     CPU cpu(clk);
 
     integer i;
+    integer clkcount = 0;
+
+    always @(posedge clk) begin
+        clkcount = clkcount + 1;
+    end
     
     always @(posedge cpu.memwb.finish) begin
-          // After executing the last memory writeback instruction
+        // After executing the last memory writeback instruction
+
+        // Print out total clock used
+        $display("The total clock cycles used: %d", clkcount);
+        
         // Print out memory info
         
         $display("The data memory after execution is:");
@@ -44,9 +47,7 @@ module test_CPU();
         cpu.pc <= 0;
         cpu.stallSignal <= 0;
         cpu.pcIncrement <= 0;
-        //$monitor(cpu.pc);
 
-        //$monitor("stall: %b",cpu.stallSignal);
 
         #3000      // Default finish
         $display("Error: No finish signal detected. Process aborted.");

@@ -19,20 +19,9 @@ module CPU (
 
     // Maintain program counter
     reg[31:0] pc, pcIncrement;       // Maintaining the program counter register
-    integer clkcount = 0;
     
     always @(posedge clk) begin
-        $display("posclk");
         pcIncrement = pc + 1;   // word-based
-        clkcount = clkcount + 1;
-        //$display("pc: %d", pc);
-        //$display("Clock: %d", clkcount);
-        //$display("stallSignal: %b", stallSignal);
-    end
-
-    always @(negedge clk) begin
-        $display("negclk");
-        //$display("instruction: %b", instruction);
     end
 
     // Set program counter
@@ -45,14 +34,13 @@ module CPU (
                 2'b00: pc = pcIncrement;
                 2'b01: begin 
                     pc = exmem.pcBranched;
-                    $display("branching to %d", pc);
+                    //$display("branching to %d", pc);
                 end
                 2'b10: begin 
                     pc = idex.jumpAddr;
-                    $display("jumping to: %d", pc);
+                    //$display("jumping to: %d", pc);
                 end
                 default: begin
-                    //$display("%b, Error: invalid pcSrc signal.", exmem.pcSrc);
                     pc = pcIncrement;
                 end
             endcase
@@ -105,7 +93,7 @@ module CPU (
         #1  // After the interface values are set
         if (idex.rtField == ifid.rs || idex.rtField == ifid.rt) begin 
             stallSignal <= 1'b1;
-            $display("lw stall");
+            //$display("lw stall");
             
             #13 // after next cycle's negedge
             // Insert nop to the next instruction
@@ -128,11 +116,11 @@ module CPU (
 
             idex.aluFirstVal <= 0;
             idex.aluSecondVal <= 0;
-            $display("cleared the control");
+            //$display("cleared the control");
 
             // Unstall the next next posedge
             stallSignal <= 1'b0;
-            $display("unstalled the signal");
+            //$display("unstalled the signal");
         end
         
     end
@@ -167,7 +155,7 @@ module CPU (
             idex.branch <= 0;
             idex.jump <= 0;
 
-            $display("Branch hazard countered");
+            //$display("Branch hazard countered");
         end
 
     end
@@ -382,7 +370,7 @@ module DecodeExecuteInterface (clk,
         if (opcode == 6'b000000 && func == 6'b001000) begin
             // supply the retrieved register rs to be jumpAddr
             jumpAddr = aluFirstVal/4;
-            $display("jr detected in idex, aluFirstVal: %d, destination: %d", aluFirstVal, jumpAddr);
+            //$display("jr detected in idex, aluFirstVal: %d, destination: %d", aluFirstVal, jumpAddr);
         end
         // Handler for jal
         if (opcode == 6'b000011) begin
@@ -390,7 +378,7 @@ module DecodeExecuteInterface (clk,
             destRegField = 5'b11111;
             // Make the first operand the next pc address
             aluFirstVal = pcIncrement*4;
-            $display("jal detected in idex. aluFirstVal: %d", aluFirstVal);
+            //$display("jal detected in idex. aluFirstVal: %d", aluFirstVal);
         end
 
         // $display("after hazard unit set aluSecondVal: %b", aluSecondVal);
@@ -453,7 +441,7 @@ module ExecuteMemoryInterface (
         pcSrc[0] <= ((branchTemp == 1) && (ALUresultTemp == 1)) ? 1 : 0;
         //$display("branch: %b", branchTemp);
         //$display("aluResult: %d", aluResult);
-        if ((branchTemp == 1) && (ALUresultTemp == 1)) $display("branching...");
+        //if ((branchTemp == 1) && (ALUresultTemp == 1)) $display("branching...");
 
         //$display("secondVal: %d", secondVal);
     end
@@ -528,10 +516,8 @@ module HazardDetectionUnit (clk,
             if (IDEXrs != 0) begin
                 if (MEMWBmemToReg == 1) begin 
                     aluFirstSrc = 2'b11;
-                    $display("hazard: case 3 for lw");
                 end
                 else begin aluFirstSrc = 2'b10;
-                    $display("hazard: case 3 for register");
                 end
             end
         end
@@ -542,10 +528,8 @@ module HazardDetectionUnit (clk,
                 // Supply the ALU second operand to be the MEMWB's aluResult
                 if (MEMWBmemToReg == 1) begin 
                     aluSecondSrc = 2'b11;
-                    $display("hazard: case 4 for lw");
                 end
                 else begin aluSecondSrc = 2'b10;
-                    $display("hazard: case 4 for register");
                 end
             end
         end
@@ -556,17 +540,14 @@ module HazardDetectionUnit (clk,
             if (IDEXrs != 0) begin
             // Supply the ALU first operand to be the EXMEM's aluResult
                 aluFirstSrc = 2'b01;
-                $display("hazard: case 1");
             end
         end
 
-        // $display("!EXMEMdestRegField: %b", EXMEMdestRegField);
         // Case 4: EX/MEM.destination register = ID/EX.register rt
         if (EXMEMdestRegField == IDEXrt)begin
             // Supply the ALU second operand to be the EXMEM's aluResult
             if (IDEXrt != 0) begin
                 aluSecondSrc = 2'b01;
-                $display("hazard: case 2");
             end
         end
 
