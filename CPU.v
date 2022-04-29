@@ -59,7 +59,9 @@ module CPU (
         end
     end
 
-    // Put together components
+    // Put together components (including 5 pipeline stages,
+    // pipeline registers (called interfaces here because they are between stages),
+    // and the asynchronous control unit, and the hazard detection unit)
     InstructionRAM insMem(clk, 1'b0, 1'b1, pc, instruction);
     FetchDecodeInterface ifid(clk, instruction, stallSignal, pcIncrement);
     ControlUnit control(ifid.opcode, ifid.func);
@@ -93,7 +95,12 @@ module CPU (
     MemoryWriteBackInterface memwb(clk, exmem.regWrite, exmem.memToReg,
     dataMem.DATA, exmem.aluResult, exmem.destRegField, exmem.finish);
 
-    // 1. For lw stall hazard
+    // Although 4 types of hazards are countered in the hazard detection unit,
+    // We separate some hazard out because those in the hazard detection unit 
+    // have forwarding functions. While the 3 hazards listed below do not require forwarding.
+    // So maybe a better name for the `HazardDetectionUnit` is forwarding unit
+
+    // 1. Handling for lw stall hazard
     always @(posedge idex.memRead) begin       // at certain negedge clk
         #1  // After the interface values are set
         if (idex.rtField == ifid.rs || idex.rtField == ifid.rt) begin 
@@ -151,7 +158,6 @@ module CPU (
             ifid.pcIncrement <= 0;
             ifid.finish <= 0;
 
-
             idex.memWrite <= 0;
             idex.memRead <= 0;
             idex.memToReg <= 0;
@@ -185,17 +191,22 @@ module CPU (
         ifid.pcIncrement <= 0;
         ifid.finish <= 0;
 
-        $display("jump and cleared");
-
-
         // Restore 
         #5
         exmem.pcSrc[1] = 1'b0;
-        $display("restored no jump");
     end
 
 endmodule
 
+/* Note: FetchDecodeInterface, DecodeExecuteInterface, ExecuteMemoryInterface, MemoryWriteBackInterface
+    
+    These are the four pipeline registers between the five pipeline stages.
+    Their function is to receive previous "wires" signal and put necessary ones to store in registers
+    
+    The DecodeExecuteInterface is combined with 2 multiplexors to select input to ALU;
+    also generates addresses for the branch and jump destinations
+
+*/
 module FetchDecodeInterface (
     clk, instruction, stallSignal, pcIncrementTemp
 );
@@ -219,7 +230,8 @@ module FetchDecodeInterface (
     end
 
     always @(negedge clk) begin     // negedge so only write after finishing previous stage
-        // We want this to happen after the above
+        // The terminating procedure
+        // We wait until this finish signal to go to the last stage; then terminate
         if (instruction == 32'b11111111111111111111111111111111) begin
             finish = 1'b1;
         end
@@ -246,8 +258,6 @@ module FetchDecodeInterface (
             jumpAddr[25:0] <= instruction[25:0];
             jumpAddr[27:26] <= 2'b00;
             jumpAddr[31:28] <= pcIncrement[31:28];
-
-
         end
     end
 endmodule
@@ -270,21 +280,8 @@ module DecodeExecuteInterface (clk,
      regDstTemp, regWriteTemp, branchTemp, jumpTemp, finishTemp;     // Control signals
     input [31:0] pcIncrementTemp, firstValTemp,
      secondValTemp, immediateSignExtTemp, jumpAddrTemp, 
-     EXMEMaluResult, MEMWBaluResult, MEMWBreadDataMem;        // IMPORTANT: passed from hazard detector
+     EXMEMaluResult, MEMWBaluResult, MEMWBreadDataMem; 
 
-    //first operand
-    // 00: rs
-    // 01: EXMEM's aluResult
-    // 10: MEMWB's aluResult
-
-    // second operand
-    // 00: rt
-    // 01: EXMEM's aluResult
-    // 10: MEMWB's aluResult
-
-    // second operand extended filter
-    // 0: from last one
-    // 1: immediate sign extend
 
     input [4:0] rtFieldTemp, rdFieldTemp, rsFieldTemp;
     input [5:0] funcTemp, opcodeTemp;
@@ -305,7 +302,7 @@ module DecodeExecuteInterface (clk,
     always @(negedge clk) begin
         // $display("rsFieldTemp in idex: %d", rsFieldTemp);
         // $display("rtFieldTemp in idex: %d", rtFieldTemp);
-        //$display("secondValTemp received in idex: %b", secondValTemp);
+        // $display("secondValTemp received in idex: %d", secondValTemp);
         memWrite <= memWriteTemp;
         branch <= branchTemp;
         jump <= jumpTemp;
@@ -332,8 +329,10 @@ module DecodeExecuteInterface (clk,
 
     end
 
+
+    // The following are two multiplexors selecting the operands into the ALU
     // RULE:
-    //first operand
+    // first operand
     // 00: rs
     // 01: EXMEM's aluResult
     // 10: MEMWB's aluResult
@@ -347,13 +346,12 @@ module DecodeExecuteInterface (clk,
     // 0: from last one
     // 1: immediate sign extend
 
-
     always @(negedge clk) begin
         #2      // After the hazard signals are set
 
         //$display("setting alufirst and second val");
         // $display("branch in idex: %b", branch);
-        //   $display("HAZARDaluSecondSrc: %b", HAZARDaluSecondSrc);
+        //  $display("HAZARDaluSecondSrc: %b", HAZARDaluSecondSrc);
         //   $display("MEMWBreadDataMem: %d", MEMWBreadDataMem);
         //  $display("aluSecondSrc: %b", aluSecondSrc);
         // $display("immediateSignExt: %b", immediateSignExt);
@@ -375,19 +373,19 @@ module DecodeExecuteInterface (clk,
         endcase
 
         case (aluSecondSrc)
-            1'b0: aluSecondVal = aluSecondVal;
+            1'b0: aluSecondVal = aluSecondValTemp;
             1'b1: aluSecondVal = immediateSignExt;
             //default: 
         endcase
 
+        // Handler for jr
         if (opcode == 6'b000000 && func == 6'b001000) begin
-            // for jr
             // supply the retrieved register rs to be jumpAddr
             jumpAddr = aluFirstVal/4;
             $display("jr detected in idex, aluFirstVal: %d, destination: %d", aluFirstVal, jumpAddr);
         end
+        // Handler for jal
         if (opcode == 6'b000011) begin
-            // For jal
             // Make the destination register number 31
             destRegField = 5'b11111;
             // Make the first operand the next pc address
@@ -409,17 +407,17 @@ endmodule
 
 module ExecuteMemoryInterface (
     clk,
-     branchTemp, // if asserted, will branch
+     branchTemp,        // if asserted, will branch
      jumpTemp,
-     pcBranchedTemp,  // The branched pc address; to be selected
-     zeroFlagTemp,  // For branch
+     pcBranchedTemp,    // The branched pc address; to be selected
+     zeroFlagTemp,      // For branch
     ALUresultTemp, 
-    secondValTemp, // To be forwarded to write data to data mem
-    regWriteTemp, // If asserted, will perform register write
+    secondValTemp,      // To be forwarded to write data to data mem
+    regWriteTemp,       // If asserted, will perform register write
     destRegFieldTemp,   // The register number to be written to
-    memReadTemp,     // Controls whether to read memory
-    memWriteTemp,    // Whether to write to memory
-    memToRegTemp,    // Whether pass data from data mem or not
+    memReadTemp,        // Controls whether to read memory
+    memWriteTemp,       // Whether to write to memory
+    memToRegTemp,       // Whether pass data from data mem or not
     jumpAddrTemp,
     finishTemp
 );
@@ -458,8 +456,6 @@ module ExecuteMemoryInterface (
         if ((branchTemp == 1) && (ALUresultTemp == 1)) $display("branching...");
 
         //$display("secondVal: %d", secondVal);
-
-
     end
 endmodule
 
@@ -526,7 +522,7 @@ module HazardDetectionUnit (clk,
 
 
 
-        // Case 3: MEM/WB.destination register = ID/EX.register rs
+        // Case 1: MEM/WB.destination register = ID/EX.register rs
         if (MEMWBdestRegField == IDEXrs)begin
             // Supply the ALU first operand to be the MEMWB's aluResult
             if (IDEXrs != 0) begin
@@ -540,7 +536,7 @@ module HazardDetectionUnit (clk,
             end
         end
 
-        // Case 4: MEM/WB.destination register = ID/EX.register rt
+        // Case 2: MEM/WB.destination register = ID/EX.register rt
         if (MEMWBdestRegField == IDEXrt)begin
             if (IDEXrt != 0) begin 
                 // Supply the ALU second operand to be the MEMWB's aluResult
@@ -554,9 +550,8 @@ module HazardDetectionUnit (clk,
             end
         end
 
-        // Modification: switched order of cases
 
-        // Case 1: EX/MEM.destination register = ID/EX.register rs
+        // Case 3: EX/MEM.destination register = ID/EX.register rs
         if (EXMEMdestRegField == IDEXrs)begin
             if (IDEXrs != 0) begin
             // Supply the ALU first operand to be the EXMEM's aluResult
@@ -566,18 +561,14 @@ module HazardDetectionUnit (clk,
         end
 
         // $display("!EXMEMdestRegField: %b", EXMEMdestRegField);
-        // Case 2: EX/MEM.destination register = ID/EX.register rt
+        // Case 4: EX/MEM.destination register = ID/EX.register rt
         if (EXMEMdestRegField == IDEXrt)begin
             // Supply the ALU second operand to be the EXMEM's aluResult
             if (IDEXrt != 0) begin
                 aluSecondSrc = 2'b01;
-                $display("hazard: case 2; IDEXrt = EXMEMdestRegField = %d", IDEXrt);
+                $display("hazard: case 2");
             end
         end
-
-        // $display("xxxxxxxxxxxxxxxx");
-         //$display("in hazard unit firstsrc: %b", aluFirstSrc);
-        // $display("in hazard unit secondsrc: %b", aluSecondSrc);
 
     end
 
