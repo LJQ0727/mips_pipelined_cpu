@@ -190,6 +190,17 @@ module ControlUnit (
                     branch <= 0;
                     jump <= 0;
                 end
+                // jr
+                6'b001000: begin
+                    memWrite <= 0;
+                    memRead <= 0;
+                    memToReg <= 0;
+                    aluSecondSrc <= 0;
+                    regDst <= 0;
+                    regWrite <= 0;
+                    branch <= 0;
+                    jump <= 1;
+                end
 
                 // default: // should not occur
                 // $display("Error: Unknown R-type instruction format.");
@@ -208,13 +219,15 @@ module ControlUnit (
             jump <= 1;
         end
         6'b000011:      // jal
+        // For jal, one additional operation is performed
+        // That is to write pc to register number 31
         begin
             memWrite <= 0;
             memRead <= 0;
             memToReg <= 0;
             aluSecondSrc <= 0;
             regDst <= 0;
-            regWrite <= 0;
+            regWrite <= 1;
             branch <= 0;
             jump <= 1;
         end

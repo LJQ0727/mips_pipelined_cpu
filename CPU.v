@@ -25,6 +25,7 @@ module CPU (
         $display("posclk");
         pcIncrement = pc + 1;   // word-based
         clkcount = clkcount + 1;
+        //$display("pc: %d", pc);
         //$display("Clock: %d", clkcount);
         //$display("stallSignal: %b", stallSignal);
     end
@@ -39,13 +40,17 @@ module CPU (
         #4
         // Used blocking assignment here
         if (!stallSignal) begin
+            //$display("exmem.pcSrc: %b", exmem.pcSrc);
             case (exmem.pcSrc)
                 2'b00: pc = pcIncrement;
                 2'b01: begin 
                     pc = exmem.pcBranched;
                     $display("branching to %d", pc);
                 end
-                2'b10: pc = exmem.jumpAddr;
+                2'b10: begin 
+                    pc = idex.jumpAddr;
+                    $display("jumping to: %d", pc);
+                end
                 default: begin
                     //$display("%b, Error: invalid pcSrc signal.", exmem.pcSrc);
                     pc = pcIncrement;
@@ -161,6 +166,34 @@ module CPU (
 
     end
 
+    // 3. For j, jr, jal operation handling
+    // Stall and skip the following executed cycles
+    always @(posedge idex.jump) begin       // Is some time after negedge clk
+        #1
+        exmem.pcSrc = 2'b10;
+
+        // Clear the executing instruction
+        ifid.opcode <= 0;
+        ifid.func <= 0;
+        ifid.rs <= 0;
+        ifid.rt <= 0;
+        ifid.rd <= 0;
+        ifid.sa <= 0;
+        ifid.immediate <= 0;
+        ifid.immediateSignExt <= 0;
+        ifid.jumpAddr <= 0;
+        ifid.pcIncrement <= 0;
+        ifid.finish <= 0;
+
+        $display("jump and cleared");
+
+
+        // Restore 
+        #5
+        exmem.pcSrc[1] = 1'b0;
+        $display("restored no jump");
+    end
+
 endmodule
 
 module FetchDecodeInterface (
@@ -207,9 +240,11 @@ module FetchDecodeInterface (
             rs <= instruction[25:21];
             
 
-            // For J-type instructions
-            jumpAddr[27:2] <= instruction[25:0];
-            jumpAddr[1:0] <= 2'b00;
+            // For j, jal that uses 26 bits for address
+            // Not including jr, which uses register
+            // Word-based addressing
+            jumpAddr[25:0] <= instruction[25:0];
+            jumpAddr[27:26] <= 2'b00;
             jumpAddr[31:28] <= pcIncrement[31:28];
 
 
@@ -258,7 +293,7 @@ module DecodeExecuteInterface (clk,
     input aluSecondSrcTemp;
 
     reg memWrite, memRead, memToReg, regDst, regWrite, branch, jump;     // Control signals
-    reg [31:0] pcBranched, firstVal, secondVal, aluSecondValTemp, immediateSignExt, jumpAddr;
+    reg [31:0] pcBranched, firstVal, secondVal, aluSecondValTemp, immediateSignExt, jumpAddr, pcIncrement;
     reg [4:0] rtField, rdField, rsField;
     reg [5:0] func, opcode;
     reg [4:0] sa, destRegField;
@@ -268,6 +303,8 @@ module DecodeExecuteInterface (clk,
     reg [31:0] aluSecondVal, aluFirstVal;
 
     always @(negedge clk) begin
+        // $display("rsFieldTemp in idex: %d", rsFieldTemp);
+        // $display("rtFieldTemp in idex: %d", rtFieldTemp);
         //$display("secondValTemp received in idex: %b", secondValTemp);
         memWrite <= memWriteTemp;
         branch <= branchTemp;
@@ -275,6 +312,7 @@ module DecodeExecuteInterface (clk,
         memRead <= memReadTemp;
         memToReg <= memToRegTemp;
         aluSecondSrc <= aluSecondSrcTemp;
+        pcIncrement <= pcIncrementTemp;
         //aluSecondSrc <= HAZARDaluSecondSrc;
         regDst <= regDstTemp;
         regWrite <= regWriteTemp;
@@ -337,11 +375,25 @@ module DecodeExecuteInterface (clk,
         endcase
 
         case (aluSecondSrc)
-            1'b0: aluSecondVal = aluSecondValTemp;
+            1'b0: aluSecondVal = aluSecondVal;
             1'b1: aluSecondVal = immediateSignExt;
             //default: 
         endcase
 
+        if (opcode == 6'b000000 && func == 6'b001000) begin
+            // for jr
+            // supply the retrieved register rs to be jumpAddr
+            jumpAddr = firstVal/4;
+            $display("jr detected in idex, destination: %d", jumpAddr);
+        end
+        if (opcode == 6'b000011) begin
+            // For jal
+            // Make the destination register number 31
+            destRegField = 5'b11111;
+            // Make the first operand the next pc address
+            aluFirstVal = pcIncrement*4;
+            $display("jal detected in idex. aluFirstVal: %d", aluFirstVal);
+        end
 
         // $display("after hazard unit set aluSecondVal: %b", aluSecondVal);
 
@@ -399,7 +451,7 @@ module ExecuteMemoryInterface (
         // jump <= jumpTemp;
         //$display("destRegField in exmem: %d", destRegField);
 
-        pcSrc[1] <= (jumpTemp == 1) ? 1 : 0;
+        pcSrc[1] <= 1'b0;       // If want to jump, this bit will be changed later in this negedge
         pcSrc[0] <= ((branchTemp == 1) && (ALUresultTemp == 1)) ? 1 : 0;
         //$display("branch: %b", branchTemp);
         //$display("aluResult: %d", aluResult);
@@ -442,7 +494,7 @@ endmodule
 // Does forwarding jobs
 module HazardDetectionUnit (clk,
     EXMEMdestRegField, IDEXrs, IDEXrt, MEMWBdestRegField, MEMWBmemToReg
-        // passed from control unit
+    // passed from control unit
     //EXMEMaluResult, MEMWBaluResult
 
 );
@@ -473,46 +525,55 @@ module HazardDetectionUnit (clk,
         // $display("%b",IDEXrs);
 
 
-        // Case 1: EX/MEM.destination register = ID/EX.register rs
-        if (EXMEMdestRegField == IDEXrs)begin
-            // Supply the ALU first operand to be the EXMEM's aluResult
-            aluFirstSrc = 2'b01;
-            $display("hazard: case 1");
-        end
-
-        // $display("!EXMEMdestRegField: %b", EXMEMdestRegField);
-        // $display("!IDExrt: %b",IDEXrt);
-        // Case 2: EX/MEM.destination register = ID/EX.register rt
-        if (EXMEMdestRegField == IDEXrt)begin
-            // Supply the ALU second operand to be the EXMEM's aluResult
-            aluSecondSrc = 2'b01;
-            $display("hazard: case 2");
-        end
 
         // Case 3: MEM/WB.destination register = ID/EX.register rs
         if (MEMWBdestRegField == IDEXrs)begin
             // Supply the ALU first operand to be the MEMWB's aluResult
-            if (MEMWBmemToReg == 1) begin 
-                aluFirstSrc = 2'b11;
-                $display("hazard: case 3 for lw");
-            end
-            else begin aluFirstSrc = 2'b10;
-                $display("hazard: case 3 for register");
+            if (IDEXrs != 0) begin
+                if (MEMWBmemToReg == 1) begin 
+                    aluFirstSrc = 2'b11;
+                    $display("hazard: case 3 for lw");
+                end
+                else begin aluFirstSrc = 2'b10;
+                    $display("hazard: case 3 for register");
+                end
             end
         end
 
         // Case 4: MEM/WB.destination register = ID/EX.register rt
         if (MEMWBdestRegField == IDEXrt)begin
-            // Supply the ALU second operand to be the MEMWB's aluResult
-            if (MEMWBmemToReg == 1) begin 
-                aluSecondSrc = 2'b11;
-                $display("hazard: case 4 for lw");
-            end
-            else begin aluSecondSrc = 2'b10;
-                $display("hazard: case 4 for register");
+            if (IDEXrt != 0) begin 
+                // Supply the ALU second operand to be the MEMWB's aluResult
+                if (MEMWBmemToReg == 1) begin 
+                    aluSecondSrc = 2'b11;
+                    $display("hazard: case 4 for lw");
+                end
+                else begin aluSecondSrc = 2'b10;
+                    $display("hazard: case 4 for register");
+                end
             end
         end
 
+        // Modification: switched order of cases
+
+        // Case 1: EX/MEM.destination register = ID/EX.register rs
+        if (EXMEMdestRegField == IDEXrs)begin
+            if (IDEXrs != 0) begin
+            // Supply the ALU first operand to be the EXMEM's aluResult
+                aluFirstSrc = 2'b01;
+                $display("hazard: case 1");
+            end
+        end
+
+        // $display("!EXMEMdestRegField: %b", EXMEMdestRegField);
+        // Case 2: EX/MEM.destination register = ID/EX.register rt
+        if (EXMEMdestRegField == IDEXrt)begin
+            // Supply the ALU second operand to be the EXMEM's aluResult
+            if (IDEXrt != 0) begin
+                aluSecondSrc = 2'b01;
+                $display("hazard: case 2; IDEXrt = EXMEMdestRegField = %d", IDEXrt);
+            end
+        end
 
         // $display("xxxxxxxxxxxxxxxx");
          //$display("in hazard unit firstsrc: %b", aluFirstSrc);

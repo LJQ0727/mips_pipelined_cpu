@@ -95,73 +95,72 @@ module ALU (
                     6'b000000: result = secondVal << sa;
                     // sllv
                     6'b000100: result = secondVal << firstVal;
+                    // jr
+                    6'b001000: begin 
+                        result = firstVal;
+                        $display("jr detected in ALU");
+                    end
 
                     // default: // should not occur
                     // $display("Error: Unknown R-type instruction format.");
                 endcase
             end
 
-            6'b00001x:      // J-type instructions
+            6'b000011:      // jal's opcode
             begin
-                // Including j, jr, jal
-
-                result = 0;     // No need to do any arithmetic operation here.
+                $display("jal detected in ALU");
+                result = firstVal;
             end
 
                 
-            default: // I-type instructions
-            begin
-                case (opcode)
-                    // addi
-                    6'b001000: begin
-                        result = firstVal + secondVal;       // second val is immediate
-                        $display("addi called, %d, %d", firstVal, secondVal);
-                        // detect overflow
-                        //overflowFlag = (firstVal[31] ^ immediate[15]) ? 0 : (firstVal[31] ^ result[31]);
-                    end
-                    // addiu
-                    6'b001001:begin
-                        $display("addiu called, %d, %d", firstVal, secondVal);
-                        result = firstVal + secondVal;       // second val is immediate
-                    end
-                    // andi
-                    6'b001100: result = firstVal & (secondVal & 32'h0000ffff);       // second val is immediate
-                    // ori
-                    6'b001101: result = firstVal | (secondVal & 32'h0000ffff);        // second val is immediate
-                    // xori
-                    // Caution: zero-extend immediate
-                    6'b001110: result = firstVal ^ (secondVal & 32'h0000ffff);       // second val is immediate
-                    // beq
-                    6'b000100: begin
-                        result = ((firstVal - secondVal) == 0);
-                        if (result == 0) zeroFlag = 1;
-                        $display("beq called: comaparing %d %d", firstVal, secondVal);
-                    end
-                    // bne
-                    6'b000101: begin
-                        //result = immediate << 2;
-                        result = ((firstVal - secondVal) != 0);
-                        if (result == 0) zeroFlag = 1;      // Should use result to indicate branch or not; zeroFLag is depreciated
-                        $display("bne called: comaparing %d %d; result %d", firstVal, secondVal, result);
-                    end
-                    // lw
-                    6'b100011: begin 
-                        result = firstVal + secondVal/4;        // added to the sign-extended immediate, no shifting
-                         $display("lw called: %d %d", firstVal, secondVal);
-                        // $display("result: %d", result);
-
-                    end
-                    // sw
-                    6'b101011: begin 
-                        result = firstVal + secondVal/4;        // added to the sign-extended immediate, no shifting
-                         $display("sw called: %d %d", firstVal, secondVal);
-                        // $display("result: %d", result);
-                    end
-
-                    // default: // should not occur
-                    //     $display("Error: Unknown I-type instruction format.");
-                endcase
+            // addi
+            6'b001000: begin
+                result = firstVal + secondVal;       // second val is immediate
+                $display("addi called in alu, %d, %d", firstVal, secondVal);
+                // detect overflow
+                //overflowFlag = (firstVal[31] ^ immediate[15]) ? 0 : (firstVal[31] ^ result[31]);
             end
+            // addiu
+            6'b001001:begin
+                $display("addiu called, %d, %d", firstVal, secondVal);
+                result = firstVal + secondVal;       // second val is immediate
+            end
+            // andi
+            6'b001100: result = firstVal & (secondVal & 32'h0000ffff);       // second val is immediate
+            // ori
+            6'b001101: result = firstVal | (secondVal & 32'h0000ffff);        // second val is immediate
+            // xori
+            // Caution: zero-extend immediate
+            6'b001110: result = firstVal ^ (secondVal & 32'h0000ffff);       // second val is immediate
+            // beq
+            6'b000100: begin
+                result = ((firstVal - secondVal) == 0);
+                if (result == 0) zeroFlag = 1;
+                $display("beq called: comaparing %d %d", firstVal, secondVal);
+            end
+            // bne
+            6'b000101: begin
+                //result = immediate << 2;
+                result = ((firstVal - secondVal) != 0);
+                if (result == 0) zeroFlag = 1;      // Should use result to indicate branch or not; zeroFLag is depreciated
+                $display("bne called: comaparing %d %d; result %d", firstVal, secondVal, result);
+            end
+            // lw
+            6'b100011: begin 
+                result = firstVal + secondVal/4;        // added to the sign-extended immediate, no shifting
+                    $display("lw called: %d %d", firstVal, secondVal);
+                // $display("result: %d", result);
+
+            end
+            // sw
+            6'b101011: begin 
+                result = firstVal + secondVal/4;        // added to the sign-extended immediate, no shifting
+                    $display("sw called: %d %d", firstVal, secondVal);
+                // $display("result: %d", result);
+            end
+
+            // default: // should not occur
+            //     $display("Error: Unknown I-type instruction format.");
         endcase
     end
 endmodule
