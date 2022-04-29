@@ -383,8 +383,8 @@ module DecodeExecuteInterface (clk,
         if (opcode == 6'b000000 && func == 6'b001000) begin
             // for jr
             // supply the retrieved register rs to be jumpAddr
-            jumpAddr = firstVal/4;
-            $display("jr detected in idex, destination: %d", jumpAddr);
+            jumpAddr = aluFirstVal/4;
+            $display("jr detected in idex, aluFirstVal: %d, destination: %d", aluFirstVal, jumpAddr);
         end
         if (opcode == 6'b000011) begin
             // For jal

@@ -33,7 +33,7 @@ module test_CPU();
         
         $display("The data memory after execution is:");
         for (i = 0; i < 512; i++)begin
-            //$display("%b",cpu.dataMem.DATA_RAM[i]);
+            $display("%b",cpu.dataMem.DATA_RAM[i]);
         end
         $finish;    // Terminate program
     end
