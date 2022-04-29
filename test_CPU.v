@@ -11,6 +11,7 @@
 module test_CPU();
     
     reg clk;
+    
     // Set up clock
     initial begin
         clk = 0;
@@ -21,6 +22,12 @@ module test_CPU();
 
     integer i;
     integer clkcount = 0;
+    integer file;
+    initial begin
+        // Create file for memory dump
+        // Filename: mem.txt
+        file = $fopen("mem.txt", "w");
+    end
 
     always @(posedge clk) begin
         clkcount = clkcount + 1;
@@ -33,10 +40,11 @@ module test_CPU();
         $display("The total clock cycles used: %d", clkcount);
         
         // Print out memory info
-        
+        $display("File: mem.txt is also opened for memory dump.");
         $display("The data memory after execution is:");
         for (i = 0; i < 512; i++)begin
             $display("%b",cpu.dataMem.DATA_RAM[i]);
+            $fwrite(file, "%b\n", cpu.dataMem.DATA_RAM[i]);
         end
         $finish;    // Terminate program
     end
