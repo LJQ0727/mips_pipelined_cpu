@@ -26,7 +26,7 @@ module test_CPU();
     initial begin
         // Create file for memory dump
         // Filename: mem.txt
-        file = $fopen("mem.txt", "w");
+        file = $fopen("memdump.txt", "w");
     end
 
     always @(posedge clk) begin
@@ -40,12 +40,12 @@ module test_CPU();
         $display("The total clock cycles used: %d", clkcount);
         
         // Print out memory info
-        $display("File: mem.txt is also opened for memory dump.");
         $display("The data memory after execution is:");
         for (i = 0; i < 512; i++)begin
             $display("%b",cpu.dataMem.DATA_RAM[i]);
             $fwrite(file, "%b\n", cpu.dataMem.DATA_RAM[i]);
         end
+        $display("File: memdump.txt also stores the memory dump.");
         $finish;    // Terminate program
     end
 
