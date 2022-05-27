@@ -34,7 +34,7 @@ This picture next page shows how exactly different components are put together.
 
 
 <p align="center">
-  <img width="1000" src="1.png" alt="txt">
+  <img width="1000" src="assets/1.png" alt="txt">
     
 </p>
 <p align="center">
@@ -86,9 +86,9 @@ This module:
 - Determines by the instruction, if the instruction is `32'hffffffff`, the finish signal will be asserted
 
 <p float="left" >
-  <img src="2.png" width="250" />
+  <img src="assets/2.png" width="250" />
   &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;
-  <img src="3.png" width="250" /> 
+  <img src="assets/3.png" width="250" /> 
 </p>
 
   <p>Figure 2. The `FetchDecodeInterface`&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;Figure 3. The `DecodeExecuteInterface`</p>
@@ -159,7 +159,7 @@ The data hazards are counter using forwarding.
 These data hazards are detected using the `HazardDetectionUnit`, and the `HazardDetectionUnit` passes the control signals of `aluFirstSrc`, `aluSecondSrc` to `DecodeExecuteInterface` to determine whether the data comes from register file, or directly from `EX/MEM` or `MEM/WB`. This forwarding does not punish the cycle.
 
 <!-- <p align="center">
-  <img width="600" src="4.png" alt="txt">
+  <img width="600" src="assets/4.png" alt="txt">
     
 </p>
 <p align="center">
@@ -167,7 +167,7 @@ These data hazards are detected using the `HazardDetectionUnit`, and the `Hazard
 </p>
 
 <p align="center">
-  <img width="600" src="5.png" alt="txt">
+  <img width="600" src="assets/5.png" alt="txt">
     
 </p>
 <p align="center">

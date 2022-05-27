@@ -1,6 +1,7 @@
-*
+
 *.*
 !*.v
 !*.md
-!cpu_test
+!cpu_test/*
 !.gitignore
+!assets/*
