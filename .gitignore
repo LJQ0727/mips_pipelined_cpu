@@ -1,0 +1,6 @@
+*
+*.*
+!*.v
+!*.md
+!cpu_test
+!.gitignore
