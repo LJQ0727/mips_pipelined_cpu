@@ -1,5 +1,4 @@
-# Assignment 5 Project Report  
-#### Li Jiaqi &nbsp; 120090727  &nbsp;   School of Data Science  
+# MIPS Pipelined CPU
   
 ## 1. Overview
 ### What is this project
@@ -32,11 +31,7 @@ This picture next page shows how exactly different components are put together.
 - 1 cycle punishment: `lw` stall hazard; `j`, `jr`, `jal`; 
 - 2 cycles punishment: `branch` if branch is taken
 
-
-<p align="center">
-  <img width="1000" src="assets/1.png" alt="txt">
-    
-</p>
+![](assets/1.png)
 <p align="center">
     Figure 1. The overall pipeline design, and signals
 </p>
@@ -86,7 +81,7 @@ This module:
 - Determines by the instruction, if the instruction is `32'hffffffff`, the finish signal will be asserted
 
 <p float="left" >
-  <img src="assets/2.png" width="250" />
+  <img src="./assets/2.png" width="250" />
   &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;
   <img src="assets/3.png" width="250" /> 
 </p>
