@@ -4,4 +4,4 @@
 !*.md
 !cpu_test/*
 !.gitignore
-!assets/*
+!images/*
