@@ -32,9 +32,9 @@ This picture next page shows how exactly different components are put together.
 - 2 cycles punishment: `branch` if branch is taken
 
 ![img1](images/1.png)
-<!-- <p align="center">
+<p align="center">
     Figure 1. The overall pipeline design, and signals
-</p> -->
+</p>
 
 
 ## 2. Files and what they do
@@ -80,13 +80,14 @@ This module:
 - Sign extends the immediate
 - Determines by the instruction, if the instruction is `32'hffffffff`, the finish signal will be asserted
 
-<!-- <p float="left" >
-  <img src="images/2.png" width="250" />
+<p float="left" >
+  <img src="./images/2.png" width="250" />
+  &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;
   <img src="images/3.png" width="250" /> 
 </p>
 
   <p>Figure 2. The `FetchDecodeInterface`&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;Figure 3. The `DecodeExecuteInterface`</p>
-   -->
+  
 
 
 > The `DecodeExecuteInterface` module
@@ -152,7 +153,7 @@ Others:
 The data hazards are counter using forwarding.
 These data hazards are detected using the `HazardDetectionUnit`, and the `HazardDetectionUnit` passes the control signals of `aluFirstSrc`, `aluSecondSrc` to `DecodeExecuteInterface` to determine whether the data comes from register file, or directly from `EX/MEM` or `MEM/WB`. This forwarding does not punish the cycle.
 
-<!-- <p align="center">
+<p align="center">
   <img width="600" src="images/4.png" alt="txt">
     
 </p>
@@ -166,7 +167,7 @@ These data hazards are detected using the `HazardDetectionUnit`, and the `Hazard
 </p>
 <p align="center">
     Figure 5. Implementing the forwarding signals
-</p> -->
+</p>
 
 
 ### Forwarding for `lw` instruction: How stalling is implemented
