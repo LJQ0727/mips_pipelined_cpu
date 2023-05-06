@@ -31,10 +31,10 @@ This picture next page shows how exactly different components are put together.
 - 1 cycle punishment: `lw` stall hazard; `j`, `jr`, `jal`; 
 - 2 cycles punishment: `branch` if branch is taken
 
-![](images/1.png)
-<p align="center">
+![img1](images/1.png)
+<!-- <p align="center">
     Figure 1. The overall pipeline design, and signals
-</p>
+</p> -->
 
 
 ## 2. Files and what they do
@@ -80,14 +80,13 @@ This module:
 - Sign extends the immediate
 - Determines by the instruction, if the instruction is `32'hffffffff`, the finish signal will be asserted
 
-<p float="left" >
-  <img src="./images/2.png" width="250" />
-  &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;
+<!-- <p float="left" >
+  <img src="images/2.png" width="250" />
   <img src="images/3.png" width="250" /> 
 </p>
 
   <p>Figure 2. The `FetchDecodeInterface`&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;Figure 3. The `DecodeExecuteInterface`</p>
-  
+   -->
 
 
 > The `DecodeExecuteInterface` module
